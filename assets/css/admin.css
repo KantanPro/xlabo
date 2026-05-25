@@ -1,0 +1,52 @@
+.xlabo-settings .xlabo-connection-status {
+	border-left: 4px solid #46b450;
+	background: #f6fff8;
+	padding: 12px 16px;
+	margin: 12px 0 20px;
+}
+
+.xlabo-settings .xlabo-actions {
+	margin-bottom: 24px;
+}
+
+.xlabo-settings .xlabo-log-table {
+	margin-top: 8px;
+}
+
+.xlabo-log-level {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 999px;
+	font-size: 11px;
+	text-transform: uppercase;
+}
+
+.xlabo-log-level-success {
+	background: #edf7ed;
+	color: #1e7e34;
+}
+
+.xlabo-log-level-error {
+	background: #fdecea;
+	color: #b32d2e;
+}
+
+.xlabo-log-level-info {
+	background: #eef3fb;
+	color: #2271b1;
+}
+
+.xlabo-metabox .xlabo-preview {
+	background: #f6f7f7;
+	border: 1px solid #dcdcde;
+	padding: 8px;
+	word-break: break-word;
+}
+
+.xlabo-manual-share-result.is-error {
+	color: #b32d2e;
+}
+
+.xlabo-manual-share-result.is-success {
+	color: #1e7e34;
+}
