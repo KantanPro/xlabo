@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "wp-plugin-development": {
+      "source": "WordPress/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/wp-plugin-development/SKILL.md",
+      "computedHash": "2660f4c284157490fabc02493b5c2cbd13fb37d4f1eac149b4064e7d1900f3c5"
+    }
+  }
+}
