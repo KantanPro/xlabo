@@ -71,6 +71,14 @@ class XLabo_Settings {
 	 * @return array<string, mixed>
 	 */
 	public function sanitize_settings( $input ): array {
+		// register_setting() の sanitize_callback は sanitize_option_{$option} フィルタとして
+		// 登録されるため、update_option() のたびに実行される。
+		// update_settings() 経由の内部書き込みは既に完全な設定配列であり、ここでフォーム前提の
+		// 加工（秘密情報の再暗号化・保持フィールドの巻き戻し）を行うと値が壊れるため素通しする。
+		if ( $this->plugin->is_internal_write() ) {
+			return wp_parse_args( is_array( $input ) ? $input : array(), XLabo_Plugin::default_settings() );
+		}
+
 		$current  = $this->plugin->get_settings();
 		$defaults = XLabo_Plugin::default_settings();
 		$input    = is_array( $input ) ? $input : array();

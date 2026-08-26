@@ -130,6 +130,13 @@ final class XLabo_Plugin {
 	}
 
 	/**
+	 * update_settings() による内部書き込み中フラグ。
+	 *
+	 * @var bool
+	 */
+	private bool $internal_write = false;
+
+	/**
 	 * 設定を取得する。
 	 *
 	 * @return array<string, mixed>
@@ -150,7 +157,23 @@ final class XLabo_Plugin {
 	 * @param array<string, mixed> $settings 設定配列。
 	 */
 	public function update_settings( array $settings ): void {
-		update_option( self::OPTION_KEY, wp_parse_args( $settings, self::default_settings() ) );
+		$this->internal_write = true;
+
+		try {
+			update_option( self::OPTION_KEY, wp_parse_args( $settings, self::default_settings() ) );
+		} finally {
+			$this->internal_write = false;
+		}
+	}
+
+	/**
+	 * update_settings() 経由の内部書き込み中かどうか。
+	 *
+	 * register_setting() の sanitize_callback は update_option() のたびに実行されるため、
+	 * フォーム送信を前提とした加工を内部書き込みに適用しないよう判定に使う。
+	 */
+	public function is_internal_write(): bool {
+		return $this->internal_write;
 	}
 
 	/**
