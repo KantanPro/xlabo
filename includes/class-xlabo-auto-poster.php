@@ -112,7 +112,26 @@ class XLabo_Auto_Poster {
 			);
 		}
 
-		$this->plugin->oauth->maybe_refresh_token();
+		// 更新が必要だったのに失敗したら、死んだトークンで送っても必ず失敗する。
+		// 画像アップロードを含む無駄な往復を避け、原因が分かる形で止める。
+		if ( ! $this->plugin->oauth->maybe_refresh_token() ) {
+			$error = __( 'アクセストークンの更新に失敗したため送信を中止しました。設定画面から X に接続し直してください。', 'xlabo' );
+
+			$this->plugin->add_log(
+				sprintf(
+					/* translators: %s: post title */
+					__( '「%s」の X シェアを中止: アクセストークンを更新できません。', 'xlabo' ),
+					get_the_title( $post )
+				),
+				'error',
+				array( 'post_id' => $post->ID )
+			);
+
+			return array(
+				'success' => false,
+				'error'   => $error,
+			);
+		}
 
 		$text    = $this->build_tweet_text( $post );
 		$options = $this->build_share_options( $post );

@@ -234,7 +234,20 @@ class XLabo_Settings {
 
 		check_admin_referer( 'xlabo_test_tweet' );
 
-		$this->plugin->oauth->maybe_refresh_token();
+		if ( ! $this->plugin->oauth->maybe_refresh_token() ) {
+			// 失敗の詳細は refresh_access_token() 側でログに残っている。
+			wp_safe_redirect(
+				add_query_arg(
+					array(
+						'page'          => 'xlabo',
+						'xlabo_notice'  => 'error',
+						'xlabo_message' => rawurlencode( __( 'アクセストークンを更新できませんでした。X に接続し直してください。', 'xlabo' ) ),
+					),
+					admin_url( 'options-general.php' )
+				)
+			);
+			exit;
+		}
 
 		$result = $this->plugin->api->post_tweet(
 			sprintf(
@@ -311,6 +324,7 @@ class XLabo_Settings {
 
 		$settings   = $this->plugin->get_settings();
 		$connected  = $this->plugin->is_connected();
+		$expired    = $this->plugin->oauth->is_token_expired();
 		$auth_url   = $this->plugin->oauth->get_authorization_url();
 		$post_types = get_post_types(
 			array(
@@ -319,10 +333,38 @@ class XLabo_Settings {
 			'objects'
 		);
 
+		// いまシェアされる状態なのかを最初に言い切る。接続だけできていて自動シェアが
+		// オフ、という組み合わせは画面上まったく目立たず、公開しても何も起きない理由に
+		// 気づけないため。
+		if ( ! $connected ) {
+			$status_class = 'notice-error';
+			$status_text  = __( 'X に接続されていません。投稿を公開してもシェアされません。', 'xlabo' );
+		} elseif ( $expired ) {
+			$status_class = 'notice-error';
+			$status_text  = __( 'アクセストークンの期限が切れています。下の「X と接続」から接続し直してください。', 'xlabo' );
+		} elseif ( empty( $settings['enabled'] ) ) {
+			$status_class = 'notice-warning';
+			$status_text  = __( '自動シェアはオフです。投稿を公開しても X にはシェアされません。下の「自動シェア」をオンにしてください。', 'xlabo' );
+		} else {
+			$status_class = 'notice-success';
+			$connected_as = trim( (string) ( $settings['connected_username'] ?? '' ) );
+			$status_text  = '' !== $connected_as
+				? sprintf(
+					/* translators: %s: connected X username */
+					__( '自動シェアは有効です（@%s）。', 'xlabo' ),
+					$connected_as
+				)
+				: __( '自動シェアは有効です。', 'xlabo' );
+		}
+
 		?>
 		<div class="wrap xlabo-settings">
 			<h1><?php echo esc_html__( 'xLabo 設定', 'xlabo' ); ?></h1>
 			<p><?php echo esc_html__( 'WordPress の投稿を公開したタイミングで X（旧 Twitter）へ自動シェアします。', 'xlabo' ); ?></p>
+
+			<div class="notice <?php echo esc_attr( $status_class ); ?> inline">
+				<p><strong><?php echo esc_html( $status_text ); ?></strong></p>
+			</div>
 
 			<form method="post" action="options.php">
 				<?php settings_fields( 'xlabo_settings_group' ); ?>

@@ -3,7 +3,7 @@
  * Plugin Name: xLabo
  * Plugin URI: https://github.com/KantanPro/xLabo
  * Description: WordPress の投稿を公開時に X（旧 Twitter）へ自動シェアするプラグインです。
- * Version: 1.1.1
+ * Version: 1.2.0
  * Author: KantanPro
  * License: GPL-2.0-or-later
  * Text Domain: xlabo
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'XLABO_VERSION', '1.1.0' );
+define( 'XLABO_VERSION', '1.2.0' );
 define( 'XLABO_PLUGIN_FILE', __FILE__ );
 define( 'XLABO_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'XLABO_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

@@ -17,6 +17,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 class XLabo_OAuth {
 
 	/**
+	 * 期限の何秒前からトークンを更新するか。
+	 *
+	 * X のアクセストークンは2時間で切れる。期限ちょうどまで使うと、判定を通ったあと
+	 * 送信中に切れて投稿が落ちるため、手前に余裕を取る。
+	 */
+	private const REFRESH_SKEW = 300;
+
+	/**
 	 * @var XLabo_Plugin
 	 */
 	private $plugin;
@@ -218,6 +226,11 @@ class XLabo_OAuth {
 
 	/**
 	 * リフレッシュトークンでアクセストークンを更新する。
+	 *
+	 * 失敗はすべてログに残す。X のリフレッシュトークンは使い捨てでローテーションするため、
+	 * 一度取りこぼすと再接続するまで復旧しない。黙って false を返すと自動シェアが
+	 * 恒久的に止まったことに誰も気づけないので、必ず理由を記録する。
+	 * ログにトークンや秘密情報そのものを出さないこと。
 	 */
 	public function refresh_access_token(): bool {
 		$settings       = $this->plugin->get_settings();
@@ -226,6 +239,11 @@ class XLabo_OAuth {
 		$refresh_token  = $this->plugin->decrypt( (string) ( $settings['oauth2_refresh_token'] ?? '' ) );
 
 		if ( '' === $client_id || '' === $refresh_token ) {
+			$this->plugin->add_log(
+				__( 'アクセストークンを更新できません: クライアントIDまたはリフレッシュトークンが未設定です。設定画面から X に接続し直してください。', 'xlabo' ),
+				'error'
+			);
+
 			return false;
 		}
 
@@ -253,12 +271,43 @@ class XLabo_OAuth {
 		);
 
 		if ( is_wp_error( $response ) ) {
+			$this->plugin->add_log(
+				sprintf(
+					/* translators: %s: error message */
+					__( 'アクセストークンの更新に失敗しました（通信エラー）: %s', 'xlabo' ),
+					$response->get_error_message()
+				),
+				'error'
+			);
+
 			return false;
 		}
 
-		$data = json_decode( (string) wp_remote_retrieve_body( $response ), true );
+		$status = (int) wp_remote_retrieve_response_code( $response );
+		$data   = json_decode( (string) wp_remote_retrieve_body( $response ), true );
 
 		if ( ! is_array( $data ) || empty( $data['access_token'] ) ) {
+			// X が返すのはエラー種別と説明のみ。トークンは含まれないのでそのまま記録してよい。
+			$detail = '';
+
+			if ( is_array( $data ) ) {
+				$detail = trim( (string) ( $data['error_description'] ?? $data['error'] ?? '' ) );
+			}
+
+			if ( '' === $detail ) {
+				$detail = __( '応答にアクセストークンが含まれていませんでした。', 'xlabo' );
+			}
+
+			$this->plugin->add_log(
+				sprintf(
+					/* translators: 1: HTTP status code, 2: error detail */
+					__( 'アクセストークンの更新に失敗しました（HTTP %1$d）: %2$s / 設定画面から X に接続し直してください。', 'xlabo' ),
+					$status,
+					$detail
+				),
+				'error'
+			);
+
 			return false;
 		}
 
@@ -303,19 +352,50 @@ class XLabo_OAuth {
 
 	/**
 	 * 期限切れ前にトークンを更新する。
+	 *
+	 * @return bool トークンが使える見込みなら true。更新が必要だったのに失敗したときだけ false。
 	 */
-	public function maybe_refresh_token(): void {
+	public function maybe_refresh_token(): bool {
 		$settings = $this->plugin->get_settings();
 
 		if ( 'oauth2' !== ( $settings['auth_method'] ?? 'oauth2' ) ) {
-			return;
+			return true;
 		}
 
 		$expires = (int) ( $settings['oauth2_token_expires'] ?? 0 );
 
-		if ( $expires > 0 && time() >= $expires ) {
-			$this->refresh_access_token();
+		// 期限が記録されていない場合は判断材料が無いので、送信を止めずにそのまま試す。
+		if ( $expires <= 0 ) {
+			return true;
 		}
+
+		// 期限ちょうどまで引っ張ると、判定を通ったあと送信中に切れる。手前で更新しておく。
+		if ( time() < $expires - self::REFRESH_SKEW ) {
+			return true;
+		}
+
+		return $this->refresh_access_token();
+	}
+
+	/**
+	 * アクセストークンが期限切れ（または期限切れ間近）かどうか。
+	 *
+	 * 管理画面で「再接続が必要」を出すための判定。OAuth 1.0a には期限が無いので常に false。
+	 */
+	public function is_token_expired(): bool {
+		$settings = $this->plugin->get_settings();
+
+		if ( 'oauth2' !== ( $settings['auth_method'] ?? 'oauth2' ) ) {
+			return false;
+		}
+
+		$expires = (int) ( $settings['oauth2_token_expires'] ?? 0 );
+
+		if ( $expires <= 0 ) {
+			return false;
+		}
+
+		return time() >= $expires - self::REFRESH_SKEW;
 	}
 
 	/**

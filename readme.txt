@@ -4,7 +4,7 @@ Tags: twitter, x, social, share, auto-post
 Requires at least: 5.8
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.1.1
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -50,6 +50,15 @@ xLabo は、WordPress で記事を公開したタイミングで X（旧 Twitter
 はい。アイキャッチ画像を X API 経由でアップロードし、タイムライン上で大きく表示されます。また、記事ページには Twitter Card（summary_large_image）用メタタグも出力できます。
 
 == Changelog ==
+
+= 1.2.0 =
+* アクセストークンの更新に失敗したとき、理由をログに記録するよう修正（これまで無言で失敗し、自動シェアが止まったことに気づけなかった）
+* 更新に失敗した場合は X への送信を中止するよう修正
+* アクセストークンを期限の5分前に更新するよう変更（送信中の期限切れを防止）
+* 設定画面の先頭に稼働状態を表示（未接続／期限切れ／自動シェアがオフ、をそれぞれ明示）
+
+= 1.1.1 =
+* 設定の内部書き込みフラグを追加し、ログ保存時に認証情報が壊れないよう修正
 
 = 1.1.0 =
 * アイキャッチ画像の X 投稿添付に対応
